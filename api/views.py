@@ -12,7 +12,9 @@ from pymongo import MongoClient
 
 
 class UserSerializer(serializers.ModelSerializer):
-
+    """
+        Serializer for API response
+    """
     class Meta:
         model = User
         fields = ['username', 'email', 'first_name', 'last_name']
@@ -27,7 +29,7 @@ class Users(APIView):
         last_name = request.data.get('last_name')
         password = request.data.get('password')
         email = request.data.get('email')
-
+        # validate user details
         if not username:
             return Response({'detail': 'Username is required'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -43,11 +45,13 @@ class Users(APIView):
         if not email:
             return Response({'detail': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # prevent duplicate usernames
         try:
             User.objects.get(username=username)
             return Response({'detail': 'User with this username already exist!'}, status=status.HTTP_400_BAD_REQUEST)
         except User.DoesNotExist:pass
 
+        # add a new user object
         new_user = User(
             username=username,
             first_name=first_name,
@@ -57,6 +61,7 @@ class Users(APIView):
 
         new_user.save()
 
+        # hash password
         new_user.set_password(password)
 
         new_user.save()
@@ -64,10 +69,11 @@ class Users(APIView):
         return Response({'message': "User creation was successful"}, status=status.HTTP_200_OK)
 
     def get(self, request):
-
+        # return all user objects
         object_list = User.objects.all()
 
         serializer = UserSerializer(object_list, context={'request': request}, many=True)
+
         return Response(serializer.data, status=status.HTTP_200_OK)
     
 
@@ -75,9 +81,13 @@ class Products(APIView):
     permission_classes = [AllowAny,]
 
     def get(self, request):
+        # connect to Mongo client server
         client = MongoClient('localhost', 27017)
+
+        # locate ecommerce database
         db = client['ecommerce']
 
+        # fetch all records in the product document
         products = db['product'].find({})
 
         products = dumps(products)
